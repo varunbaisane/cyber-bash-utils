@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# Placeholder for failed-logins
+echo "failed-logins: not implemented yet"

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# Placeholder for port-scan
+echo "port-scan: not implemented yet"

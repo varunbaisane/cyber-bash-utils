@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# Placeholder for http-probe
+echo "http-probe: not implemented yet"

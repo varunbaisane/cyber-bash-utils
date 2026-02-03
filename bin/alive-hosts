@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# Placeholder for alive-hosts
+echo "alive-hosts: not implemented yet"
