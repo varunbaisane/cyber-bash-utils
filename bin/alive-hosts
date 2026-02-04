@@ -9,6 +9,15 @@ CORE_BIN="$(command -v cyber-core)"
 CORE_DIR="$(cd "$(dirname "$(readlink -f "$CORE_BIN")")/../core" && pwd)"
 source "$CORE_DIR/common.sh"
 
+TCP_FALLBACK=0
+for arg in "$@"; do
+    if [ "$arg" = "--tcp" ]; then
+        TCP_FALLBACK=1
+    fi
+done
+
+set -- "${@/--tcp/}"
+
 parse_args "$@"
 
 TARGET="$TARGET"
@@ -16,24 +25,61 @@ TARGET="$TARGET"
 require_cmd ping
 require_cmd xargs
 require_cmd seq
+require_cmd timeout
 
 PARALLEL_JOBS=20
 PING_TIMEOUT=1
+TCP_TIMEOUT=1
+TCP_PORTS=(80 443)
+
+tcp_probe() {
+    local ip="$1"
+
+    for port in "${TCP_PORTS[@]}"; do
+        if timeout "$TCP_TIMEOUT" bash -c "</dev/tcp/$ip/$port" \
+            >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+
+    return 1
+}
 
 if is_ipv4 "$TARGET"; then
     if ping -c 1 -W "$PING_TIMEOUT" "$TARGET" >/dev/null 2>&1; then
         echo "$TARGET"
+        exit 0
     fi
+
+    if [ "$TCP_FALLBACK" -eq 1 ] && tcp_probe "$TARGET"; then
+        echo "$TARGET"
+    fi
+
     exit 0
 fi
 
 log_info "Scanning subnet: $TARGET"
-log_info "Parallel jobs: $PARALLEL_JOBS"
+# log_info "Parallel jobs: $PARALLEL_JOBS"
+[ "$TCP_FALLBACK" -eq 1 ] && log_info "TCP fallback enabled"
 
 NETWORK="${TARGET%/*}"
 IFS=. read -r o1 o2 o3 _ <<< "$NETWORK"
 
 seq 1 254 | xargs -P "$PARALLEL_JOBS" -I{} bash -c '
 ip="'"$o1.$o2.$o3"'.{}"
-ping -c 1 -W '"$PING_TIMEOUT"' "$ip" >/dev/null 2>&1 && echo "$ip"
+
+if ping -c 1 -W '"$PING_TIMEOUT"' "$ip" >/dev/null 2>&1; then
+    echo "$ip"
+    exit 0
+fi
+
+if [ '"$TCP_FALLBACK"' -eq 1 ]; then
+    for port in '"${TCP_PORTS[*]}"'; do
+        if timeout '"$TCP_TIMEOUT"' bash -c "</dev/tcp/$ip/$port" \
+            >/dev/null 2>&1; then
+            echo "$ip"
+            exit 0
+        fi
+    done
+fi
 '
