@@ -6,18 +6,30 @@ CORE_BIN="$(command -v cyber-core)"
 CORE_DIR="$(cd "$(dirname "$(readlink -f "$CORE_BIN")")/../core" && pwd)"
 source "$CORE_DIR/logger.sh"
 
+UNIQUE=0
+
+while getopts ":u" opt; do
+    case "$opt" in
+        u) UNIQUE=1 ;;
+        *)
+            log_error "Invalid option"
+            exit 1
+            ;;
+    esac
+done
+
+shift $((OPTIND - 1))
+
 is_valid_ipv4() {
     local ip="$1"
     local IFS=.
     local octets
 
     read -r -a octets <<< "$ip"
-
     [ "${#octets[@]}" -eq 4 ] || return 1
 
     for octet in "${octets[@]}"; do
         [[ "$octet" =~ ^[0-9]+$ ]] || return 1
-
         (( octet >= 0 && octet <= 255 )) || return 1
     done
 
@@ -26,10 +38,18 @@ is_valid_ipv4() {
 
 INPUT="$(cat)"
 
-echo "$INPUT" \
-    | grep -Eo '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' \
-    | while read -r ip; do
-        if is_valid_ipv4 "$ip"; then
-            echo "$ip"
-        fi
-    done
+OUTPUT=$(
+    echo "$INPUT" \
+        | grep -Eo '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' \
+        | while read -r ip; do
+            if is_valid_ipv4 "$ip"; then
+                echo "$ip"
+            fi
+        done
+)
+
+if [ "$UNIQUE" -eq 1 ]; then
+    echo "$OUTPUT" | sort -u
+else
+    echo "$OUTPUT"
+fi
