@@ -1,0 +1,8 @@
+# Generated output files
+*.txt
+*.log
+*.out
+
+# Temporary files
+tmp/
+temp/
