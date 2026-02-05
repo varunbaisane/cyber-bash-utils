@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
 
-# Placeholder for extract-ips
-echo "extract-ips: not implemented yet"
+set -euo pipefail
+
+CORE_BIN="$(command -v cyber-core)"
+CORE_DIR="$(cd "$(dirname "$(readlink -f "$CORE_BIN")")/../core" && pwd)"
+source "$CORE_DIR/logger.sh"
+
+INPUT="$(cat)"
+
+echo "$INPUT" | grep -Eo '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b'
