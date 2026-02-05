@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
 
-# Placeholder for http-probe
-echo "http-probe: not implemented yet"
+set -euo pipefail
+
+CORE_BIN="$(command -v cyber-core)"
+CORE_DIR="$(cd "$(dirname "$(readlink -f "$CORE_BIN")")/../core" && pwd)"
+source "$CORE_DIR/logger.sh"
+
+command -v curl >/dev/null 2>&1 || {
+    log_error "curl is required"
+    exit 1
+}
+
+TARGETS="$(cat)"
+
+echo "$TARGETS" | while read -r host; do
+    [ -z "$host" ] && continue
+    echo "[PENDING] $host"
+done
