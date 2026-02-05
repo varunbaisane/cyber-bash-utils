@@ -7,18 +7,30 @@ CORE_DIR="$(cd "$(dirname "$(readlink -f "$CORE_BIN")")/../core" && pwd)"
 source "$CORE_DIR/logger.sh"
 
 UNIQUE=0
+INPUT_FILE=""
 
-while getopts ":u" opt; do
+while getopts ":uf:" opt; do
     case "$opt" in
         u) UNIQUE=1 ;;
+        f) INPUT_FILE="$OPTARG" ;;
         *)
-            log_error "Invalid option"
+            log_error "Usage: extract-ips [-u] [-f file]"
             exit 1
             ;;
     esac
 done
 
 shift $((OPTIND - 1))
+
+if [ -n "$INPUT_FILE" ]; then
+    if [ ! -f "$INPUT_FILE" ]; then
+        log_error "File not found: $INPUT_FILE"
+        exit 1
+    fi
+    INPUT="$(cat "$INPUT_FILE")"
+else
+    INPUT="$(cat)"
+fi
 
 is_valid_ipv4() {
     local ip="$1"
@@ -35,8 +47,6 @@ is_valid_ipv4() {
 
     return 0
 }
-
-INPUT="$(cat)"
 
 OUTPUT=$(
     echo "$INPUT" \
