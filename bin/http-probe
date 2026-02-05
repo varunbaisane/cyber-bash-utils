@@ -4,17 +4,17 @@ set -euo pipefail
 
 CORE_BIN="$(command -v cyber-core)"
 CORE_DIR="$(cd "$(dirname "$(readlink -f "$CORE_BIN")")/../core" && pwd)"
-source "$CORE_DIR/logger.sh"
+source "$CORE_DIR/common.sh"
 
-if ! command -v curl >/dev/null 2>&1; then
-    log_error "curl is required"
-    exit 1
-fi
+require_cmd curl
+require_cmd xargs
 
 TIMEOUT=3
+PARALLEL_JOBS=20
 
 probe_url() {
     local url="$1"
+
     local code
     code="$(curl -s -o /dev/null -w "%{http_code}" --max-time "$TIMEOUT" "$url" || true)"
 
@@ -23,11 +23,13 @@ probe_url() {
     fi
 }
 
-while read -r host; do
-    [ -z "$host" ] && continue
+export -f probe_url
+export TIMEOUT
 
-    probe_url "http://$host"
-
-    probe_url "https://$host"
-
-done
+cat \
+    | grep -v '^[[:space:]]*$' \
+    | xargs -P "$PARALLEL_JOBS" -I{} bash -c '
+        host="{}"
+        probe_url "http://$host"
+        probe_url "https://$host"
+    '
