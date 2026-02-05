@@ -6,14 +6,28 @@ CORE_BIN="$(command -v cyber-core)"
 CORE_DIR="$(cd "$(dirname "$(readlink -f "$CORE_BIN")")/../core" && pwd)"
 source "$CORE_DIR/logger.sh"
 
-command -v curl >/dev/null 2>&1 || {
+if ! command -v curl >/dev/null 2>&1; then
     log_error "curl is required"
     exit 1
+fi
+
+TIMEOUT=3
+
+probe_url() {
+    local url="$1"
+    local code
+    code="$(curl -s -o /dev/null -w "%{http_code}" --max-time "$TIMEOUT" "$url" || true)"
+
+    if [ "$code" != "000" ]; then
+        echo "$url [$code]"
+    fi
 }
 
-TARGETS="$(cat)"
-
-echo "$TARGETS" | while read -r host; do
+while read -r host; do
     [ -z "$host" ] && continue
-    echo "[PENDING] $host"
+
+    probe_url "http://$host"
+
+    probe_url "https://$host"
+
 done
